@@ -8,5 +8,5 @@ class main(Cog_Template):
     async def ping(self, ctx):
         await ctx.send(self.bot.latency)
 
-def setup(bot):
-   bot.add_cog(main(bot))
+async def setup(bot):
+   await bot.add_cog(main(bot))

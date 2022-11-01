@@ -29,11 +29,6 @@ async def on_member_remove(member):
     await channel.send(f'{member} leave')
     print(f'{member} leave')
 
-async def load_extensions():
-    for Filename in os.listdir('./commands'):
-        if Filename.endswith('.py'):
-            bot.load_extension(f'commands.{Filename[:-3]}')
-
 @bot.command()
 async def load(ctx, ext):
     bot.load_extension(f'Cog.{ext}')
