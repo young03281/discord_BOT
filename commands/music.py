@@ -13,6 +13,7 @@ class music_Bot(commands.Cog):
         self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True'}
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
         self.vc = None
+        self.is_repeat = False
 
      #searching the item on youtube
     def search_yt(self, item):
@@ -31,10 +32,14 @@ class music_Bot(commands.Cog):
             #get the first url
             m_url = self.music_queue[0][0]['source']
 
-            #remove the first element as you are currently playing it
-            self.music_queue.pop(0)
+            if self.is_repeat:
+                self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
 
-            self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
+            else:
+                #remove the first element as you are currently playing it
+                self.music_queue.pop(0)
+
+                self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
         else:
             self.is_playing = False
 
@@ -43,7 +48,10 @@ class music_Bot(commands.Cog):
         if len(self.music_queue) > 0:
             self.is_playing = True
 
+            global current_song
+
             m_url = self.music_queue[0][0]['source']
+            current_song = self.music_queue[0][0]['title']
             
             #try to connect to voice channel if you are not already connected
             if self.vc == None or not self.vc.is_connected():
@@ -57,8 +65,6 @@ class music_Bot(commands.Cog):
                 await self.vc.move_to(self.music_queue[0][1])
             
             #remove the first element as you are currently playing it
-            self.music_queue.pop(0)
-
             self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
         else:
             self.is_playing = False
@@ -101,6 +107,19 @@ class music_Bot(commands.Cog):
             self.is_paused = False
             self.is_playing = True
             self.vc.resume()
+
+    @commands.command(name = 'repeat', aliases=["re"], help="repeat the current song")
+    async def repeat(self, ctx):
+        if self.is_repeat: 
+            self.is_repeat = False
+            await ctx.send('stop repeating')
+        else:   
+            if self.is_paused or self.is_playing:
+                self.is_repeat = True
+                await ctx.send('currently repeating:%s' %current_song )
+        
+            else: await ctx.send("there is no song to repeat, but repeat will turn on")
+
 
     @commands.command(name="skip", aliases=["s"], help="Skips the current song being played")
     async def skip(self, ctx):
