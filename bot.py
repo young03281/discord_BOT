@@ -8,7 +8,7 @@ with open('setting.json', 'r', encoding='UTF8') as jfile:
 
 intents = discord.Intents.all()
 
-bot = commands.Bot(command_prefix='$',intents=intents)
+bot = commands.Bot(command_prefix='.$',intents=intents)
 
 text_channel_list = []
 
