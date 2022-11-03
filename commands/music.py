@@ -14,8 +14,11 @@ class music_Bot(commands.Cog):
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
         self.vc = None
         self.is_repeat = False
+        self.current_song = ''
+        self.repeat_url = []
 
      #searching the item on youtube
+     
     def search_yt(self, item):
         with YoutubeDL(self.YDL_OPTIONS) as ydl:
             try: 
@@ -28,18 +31,23 @@ class music_Bot(commands.Cog):
     def play_next(self):
         if len(self.music_queue) > 0:
             self.is_playing = True
-
-            #get the first url
-            m_url = self.music_queue[0][0]['source']
-
-            if self.is_repeat:
-                self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
-
-            else:
-                #remove the first element as you are currently playing it
-                self.music_queue.pop(0)
-
-                self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
+            self.music_queue.pop(0)
+            global m_url
+            
+            if len(self.music_queue) != 0 : 
+                self.repeat_url = self.music_queue[0]
+                m_url = self.music_queue[0][0]['source']
+                self.current_song = self.music_queue[0][0]['title']
+            
+            if self.is_repeat : 
+                self.music_queue.append(self.repeat_url)
+                self.repeat_url = self.music_queue[0]
+                m_url = self.music_queue[0][0]['source']
+                self.current_song = self.music_queue[0][0]['title']
+            
+            
+            #remove the first element as you are currently playing it
+            self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
         else:
             self.is_playing = False
 
@@ -48,10 +56,11 @@ class music_Bot(commands.Cog):
         if len(self.music_queue) > 0:
             self.is_playing = True
 
-            global current_song
-
+            
+            self.repeat_url = self.music_queue[0]
+            global m_url
             m_url = self.music_queue[0][0]['source']
-            current_song = self.music_queue[0][0]['title']
+            self.current_song = self.music_queue[0][0]['title']
             
             #try to connect to voice channel if you are not already connected
             if self.vc == None or not self.vc.is_connected():
@@ -64,7 +73,6 @@ class music_Bot(commands.Cog):
             else:
                 await self.vc.move_to(self.music_queue[0][1])
             
-            #remove the first element as you are currently playing it
             self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
         else:
             self.is_playing = False
@@ -116,15 +124,18 @@ class music_Bot(commands.Cog):
         else:   
             if self.is_paused or self.is_playing:
                 self.is_repeat = True
-                await ctx.send('currently repeating:%s' %current_song )
+                await ctx.send('currently repeating:%s' %self.current_song )
         
-            else: await ctx.send("there is no song to repeat, but repeat will turn on")
+            else: 
+                self.is_repeat = True
+                await ctx.send("there is no song to repeat, but repeat will turn on")
 
 
     @commands.command(name="skip", aliases=["s"], help="Skips the current song being played")
     async def skip(self, ctx):
         if self.vc != None and self.vc:
             self.vc.stop()
+            self.music_queue.pop(0)
             #try to play next in the queue if it exists
             await self.play_music(ctx)
 
@@ -134,8 +145,7 @@ class music_Bot(commands.Cog):
         retval = ""
         for i in range(0, len(self.music_queue)):
             # display a max of 5 songs in the current queue
-            if (i > 4): break
-            retval += self.music_queue[i][0]['title'] + "\n"
+            retval += f'{i+1}' + ". " + self.music_queue[i][0]['title'] + "\n"
 
         if retval != "":
             await ctx.send(retval)
