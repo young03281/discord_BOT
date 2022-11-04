@@ -45,7 +45,6 @@ class music_Bot(commands.Cog):
                 m_url = self.music_queue[0][0]['source']
                 self.current_song = self.music_queue[0][0]['title']
             
-            
             #remove the first element as you are currently playing it
             self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
         else:
