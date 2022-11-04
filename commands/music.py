@@ -13,7 +13,7 @@ class music_Bot(commands.Cog):
         self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True'}
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
         self.vc = None
-        self.is_repeat = False
+        self.is_repeat = 0
         self.current_song = ''
         self.repeat_url = []
 
@@ -39,7 +39,13 @@ class music_Bot(commands.Cog):
                 m_url = self.music_queue[0][0]['source']
                 self.current_song = self.music_queue[0][0]['title']
             
-            if self.is_repeat : 
+            if self.is_repeat == 1 : 
+                self.music_queue.extend(self.repeat_url)
+                self.repeat_url = self.music_queue[0]
+                m_url = self.music_queue[0][0]['source']
+                self.current_song = self.music_queue[0][0]['title']
+
+            if self.is_repeat == 2 :
                 self.music_queue.append(self.repeat_url)
                 self.repeat_url = self.music_queue[0]
                 m_url = self.music_queue[0][0]['source']
@@ -80,8 +86,8 @@ class music_Bot(commands.Cog):
     async def play(self, ctx, *args):
         query = " ".join(args)
         
-        voice_channel = ctx.author.voice.channel
-        if voice_channel is None:
+        voice = ctx.author.voice
+        if voice is None:
             #you need to be connected so that the bot knows where to go
             await ctx.send("Connect to a voice channel!")
         elif self.is_paused:
@@ -92,7 +98,7 @@ class music_Bot(commands.Cog):
                 await ctx.send("Could not download the song. Incorrect format try another keyword. This could be due to playlist or a livestream format.")
             else:
                 await ctx.send("Song added to the queue")
-                self.music_queue.append([song, voice_channel])
+                self.music_queue.append([song, voice.channel])
                 
                 if self.is_playing == False:
                     await self.play_music(ctx)
@@ -116,18 +122,21 @@ class music_Bot(commands.Cog):
             self.vc.resume()
 
     @commands.command(name = 'repeat', aliases=["re"], help="repeat the current song")
-    async def repeat(self, ctx):
-        if self.is_repeat: 
-            self.is_repeat = False
+    async def repeat(self, ctx, *args):
+        if self.is_repeat == 2: 
+            self.is_repeat = 0
             await ctx.send('stop repeating')
         else:   
-            if self.is_paused or self.is_playing:
-                self.is_repeat = True
-                await ctx.send('currently repeating:%s' %self.current_song )
-        
-            else: 
-                self.is_repeat = True
-                await ctx.send("there is no song to repeat, but repeat will turn on")
+            if self.is_repeat == 0:
+                self.is_repeat = 1
+                await ctx.send('currently repeating song:%s' %self.current_song )
+            else : 
+                self.is_repeat = 2
+                retval = ""
+                for i in range(0, len(self.music_queue)):
+                    retval += f'{i+1}' + ". " + self.music_queue[i][0]['title'] + "\n"
+                await ctx.send(f'currently repeating queue :\n{retval}')
+                    
 
 
     @commands.command(name="skip", aliases=["s"], help="Skips the current song being played")
