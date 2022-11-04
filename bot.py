@@ -16,8 +16,8 @@ help_message = """
 ```
 General commands:
 .$help - displays all the available commands
-.$p(p) <keywords> - finds the song on youtube and plays it in your current channel. Will resume playing the current song if it was paused
-.$q(q) - displays the current music queue
+.$play(p) <keywords> - finds the song on youtube and plays it in your current channel. Will resume playing the current song if it was paused
+.$queue(q) - displays the current music queue
 .$skip(s) - skips the current song being played
 .$clear(c) - Stops the music and clears the queue
 .$leave(l) - Disconnected the bot from the voice channel
