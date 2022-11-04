@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from core.classes import Cog_Template
 from youtube_dl import YoutubeDL
-import ffmpeg
 
 class music_Bot(commands.Cog):
     def __init__(self, bot):
@@ -76,12 +75,20 @@ class music_Bot(commands.Cog):
             
             #try to connect to voice channel if you are not already connected
             if self.vc == None or not self.vc.is_connected():
-                self.vc = await self.music_queue[0][1].connect()
+                voice = ctx.author.voice.channel
+                if voice.connect() == None:
+                    self.vc = await self.music_queue[0][1].connect()
 
-                #in case we fail to connect
-                if self.vc == None:
-                    await ctx.send("Could not connect to the voice channel")
-                    return
+                    #in case we fail to connect
+                    if self.vc == None:
+                        await ctx.send("Could not connect to the voice channel")
+                        return
+                else :
+                    await ctx.guild.voice_client.disconnect()
+                    self.vc = await self.music_queue[0][1].connect()
+                    if self.vc == None:
+                        await ctx.send("Could not connect to the voice channel")
+                        return
             else:
                 await self.vc.move_to(self.music_queue[0][1])
             
@@ -138,7 +145,7 @@ class music_Bot(commands.Cog):
             await ctx.send('stop repeating')
         elif int_args == 1:
             self.is_repeat = 1
-            await ctx.send('currently repeating song:%s' %self.current_song )
+            await ctx.send('currently repeating song:%s' %self.music_queue[0][0]['title'] )
         elif int_args == 2:
             self.is_repeat = 2
             retval = ""
@@ -152,7 +159,7 @@ class music_Bot(commands.Cog):
             else:   
                 if self.is_repeat == 0:
                     self.is_repeat = 1
-                    await ctx.send('currently repeating song:%s' %self.current_song )
+                    await ctx.send('currently repeating song:%s' %self.music_queue[0][0]['title'] )
                 else : 
                     self.is_repeat = 2
                     retval = ""
@@ -195,7 +202,17 @@ class music_Bot(commands.Cog):
     async def dc(self, ctx):
         self.is_playing = False
         self.is_paused = False
-        await self.vc.disconnect()
+        self.music_queue = []
+        await ctx.guild.voice_client.disconnect()
+
+    @commands.command(name="join", aliases=["j"], help="Let the bot join the vc")
+    async def join(self, ctx):
+        voice = ctx.author.voice
+        if voice is None:
+            #you need to be connected so that the bot knows where to go
+            await ctx.send("Connect to a voice channel!")
+        else:
+            await voice.channel.connect()
 
 async def setup(bot):
     await bot.add_cog(music_Bot(bot))
