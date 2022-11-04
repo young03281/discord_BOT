@@ -14,11 +14,16 @@ class music_Bot(commands.Cog):
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
         self.vc = None
         self.is_repeat = 0
+        #0 = no
+        #1 = first
+        #2 = queue
         self.current_song = ''
         self.repeat_url = []
 
      #searching the item on youtube
-     
+
+    
+
     def search_yt(self, item):
         with YoutubeDL(self.YDL_OPTIONS) as ydl:
             try: 
@@ -31,16 +36,17 @@ class music_Bot(commands.Cog):
     def play_next(self):
         if len(self.music_queue) > 0:
             self.is_playing = True
-            self.music_queue.pop(0)
             global m_url
-            
+            self.repeat_url = self.music_queue[0]
+            self.music_queue.pop(0)
+
             if len(self.music_queue) != 0 : 
-                self.repeat_url = self.music_queue[0]
+                
                 m_url = self.music_queue[0][0]['source']
                 self.current_song = self.music_queue[0][0]['title']
             
             if self.is_repeat == 1 : 
-                self.music_queue.extend(self.repeat_url)
+                self.music_queue.insert(0, self.repeat_url)
                 self.repeat_url = self.music_queue[0]
                 m_url = self.music_queue[0][0]['source']
                 self.current_song = self.music_queue[0][0]['title']
@@ -51,6 +57,7 @@ class music_Bot(commands.Cog):
                 m_url = self.music_queue[0][0]['source']
                 self.current_song = self.music_queue[0][0]['title']
             
+            
             #remove the first element as you are currently playing it
             self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
         else:
@@ -60,12 +67,12 @@ class music_Bot(commands.Cog):
     async def play_music(self, ctx):
         if len(self.music_queue) > 0:
             self.is_playing = True
-
-            
-            self.repeat_url = self.music_queue[0]
             global m_url
             m_url = self.music_queue[0][0]['source']
-            self.current_song = self.music_queue[0][0]['title']
+
+            if self.repeat_url == '' :
+                self.repeat_url = self.music_queue[0]
+                self.current_song = self.music_queue[0][0]['title']
             
             #try to connect to voice channel if you are not already connected
             if self.vc == None or not self.vc.is_connected():
@@ -123,19 +130,36 @@ class music_Bot(commands.Cog):
 
     @commands.command(name = 'repeat', aliases=["re"], help="repeat the current song")
     async def repeat(self, ctx, *args):
-        if self.is_repeat == 2: 
+        str_args = ''.join(args)
+        if str_args != '': int_args = int(str_args)
+        else: int_args = ''
+        if int_args == 0:
             self.is_repeat = 0
             await ctx.send('stop repeating')
-        else:   
-            if self.is_repeat == 0:
-                self.is_repeat = 1
-                await ctx.send('currently repeating song:%s' %self.current_song )
-            else : 
-                self.is_repeat = 2
-                retval = ""
-                for i in range(0, len(self.music_queue)):
-                    retval += f'{i+1}' + ". " + self.music_queue[i][0]['title'] + "\n"
-                await ctx.send(f'currently repeating queue :\n{retval}')
+        elif int_args == 1:
+            self.is_repeat = 1
+            await ctx.send('currently repeating song:%s' %self.current_song )
+        elif int_args == 2:
+            self.is_repeat = 2
+            retval = ""
+            for i in range(0, len(self.music_queue)):
+                retval += f'{i+1}' + ". " + self.music_queue[i][0]['title'] + "\n"
+            await ctx.send(f'currently repeating queue :\n{retval}')
+        else:
+            if self.is_repeat == 2:
+                self.is_repeat = 0
+                await ctx.send('stop repeating')
+            else:   
+                if self.is_repeat == 0:
+                    self.is_repeat = 1
+                    await ctx.send('currently repeating song:%s' %self.current_song )
+                else : 
+                    self.is_repeat = 2
+                    retval = ""
+                    for i in range(0, len(self.music_queue)):
+                        retval += f'{i+1}' + ". " + self.music_queue[i][0]['title'] + "\n"
+                    await ctx.send(f'currently repeating queue :\n{retval}')
+        
                     
 
 
