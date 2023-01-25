@@ -21,7 +21,7 @@ General commands:
 .$skip(s) - skips the current song being played
 .$clear(c) - Stops the music and clears the queue
 .$leave(l) - Disconnected the bot from the voice channel
-.$pause(p) - pauses the current song being played or resumes if already paused
+.$pause(pa) - pauses the current song being played or resumes if already paused
 .$resume(r) - resumes playing the current song
 .$repeat(re) - repeat the current song
 
