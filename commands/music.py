@@ -117,7 +117,7 @@ class music_Bot(commands.Cog):
                 if self.is_playing == False:
                     await self.play_music(ctx)
 
-    @commands.command(name="pause", help="Pauses the current song being played")
+    @commands.command(name="pause", aliases=["pa"], help="Pauses the current song being played")
     async def pause(self, ctx, *args):
         if self.is_playing:
             self.is_playing = False
