@@ -84,7 +84,10 @@ class music_Bot(commands.Cog):
                         await ctx.send("Could not connect to the voice channel")
                         return
                 else :
-                    await ctx.guild.voice_client.disconnect()
+                    if ctx.guild.voice_client :
+                        await ctx.guild.voice_client.disconnect()
+                    else :
+                        ctx.send("bot is not in a voice channel")
                     self.vc = await self.music_queue[0][1].connect()
                     if self.vc == None:
                         await ctx.send("Could not connect to the voice channel")
