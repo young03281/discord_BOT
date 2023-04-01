@@ -169,14 +169,15 @@ class music_Bot(commands.Cog):
                     for i in range(0, len(self.music_queue)):
                         retval += f'{i+1}' + ". " + self.music_queue[i][0]['title'] + "\n"
                     await ctx.send(f'currently repeating queue :\n{retval}')
-        
-                    
-
 
     @commands.command(name="skip", aliases=["s"], help="Skips the current song being played")
     async def skip(self, ctx):
         if self.vc != None and self.vc:
             self.vc.stop()
+            if len(self.music_queue)  > 1 : 
+                ctx.send('skipping current song:%s \n going to play:%s' %(self.current_song, self.music_queue[1][0]['title']) )
+            else :
+                ctx.send('skipping current song:%s' %self.current_song)
             self.music_queue.pop(0)
             #try to play next in the queue if it exists
             await self.play_music(ctx)
