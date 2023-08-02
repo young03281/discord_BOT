@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from core.classes import Cog_Template
 from youtube_dl import YoutubeDL
+from pytube import Playlist
 
 class music_Bot(commands.Cog):
     def __init__(self, bot):
@@ -9,7 +10,7 @@ class music_Bot(commands.Cog):
         self.is_playing = False
         self.is_paused = False
         self.music_queue = []
-        self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True'}
+        self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'outtmpl': 'C:/Users/User/Desktop/discord_BOT-main/downloads/%(extractor_key)s/%(extractor)s-%(id)s-%(title)s.%(ext)s'}
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
         self.vc = None
         self.is_repeat = 0
@@ -18,10 +19,9 @@ class music_Bot(commands.Cog):
         #2 = queue
         self.current_song = ''
         self.repeat_url = []
+        global m_url
 
      #searching the item on youtube
-
-    
 
     def search_yt(self, item):
         with YoutubeDL(self.YDL_OPTIONS) as ydl:
@@ -29,45 +29,14 @@ class music_Bot(commands.Cog):
                 info = ydl.extract_info("ytsearch:%s" % item, download=False)['entries'][0]
             except Exception: 
                 return False
-
+                
         return {'source': info['formats'][0]['url'], 'title': info['title']}
 
-    def play_next(self):
-        if len(self.music_queue) > 0:
-            self.is_playing = True
-            global m_url
-            self.repeat_url = self.music_queue[0]
-            self.music_queue.pop(0)
-
-            if len(self.music_queue) != 0 : 
-                
-                m_url = self.music_queue[0][0]['source']
-                self.current_song = self.music_queue[0][0]['title']
-            
-            if self.is_repeat == 1 : 
-                self.music_queue.insert(0, self.repeat_url)
-                self.repeat_url = self.music_queue[0]
-                m_url = self.music_queue[0][0]['source']
-                self.current_song = self.music_queue[0][0]['title']
-
-            if self.is_repeat == 2 :
-                self.music_queue.append(self.repeat_url)
-                self.repeat_url = self.music_queue[0]
-                m_url = self.music_queue[0][0]['source']
-                self.current_song = self.music_queue[0][0]['title']
-            
-            
-            #remove the first element as you are currently playing it
-            self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
-        else:
-            self.is_playing = False
-
-    # infinite loop checking 
     async def play_music(self, ctx):
         if len(self.music_queue) > 0:
             self.is_playing = True
-            global m_url
             m_url = self.music_queue[0][0]['source']
+            self.current_song  = self.music_queue[0][0]['title']
 
             if self.repeat_url == '' :
                 self.repeat_url = self.music_queue[0]
@@ -84,16 +53,45 @@ class music_Bot(commands.Cog):
                         await ctx.send("Could not connect to the voice channel")
                         return
                 else :
+                    await ctx.send("Connected to voice channel")
                     if ctx.guild.voice_client :
                         await ctx.guild.voice_client.disconnect()
-                    else :
-                        ctx.send("bot is not in a voice channel")
                     self.vc = await self.music_queue[0][1].connect()
                     if self.vc == None:
                         await ctx.send("Could not connect to the voice channel")
                         return
             else:
                 await self.vc.move_to(self.music_queue[0][1])
+            
+            self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
+        else:
+            await ctx.send("theres no songs in queue")
+            self.is_playing = False
+
+    def play_next(self):
+        if len(self.music_queue) > 0:
+            self.is_playing = True
+            self.repeat_url = self.music_queue[0]
+            self.music_queue.pop(0)
+
+            if len(self.music_queue) != 0 : 
+                m_url = self.music_queue[0][0]['source']
+                self.current_song = self.music_queue[0][0]['title']
+            else :
+                self.is_playing = False
+                return
+            
+            if self.is_repeat == 1 : 
+                self.music_queue.insert(0, self.repeat_url)
+                self.repeat_url = self.music_queue[0]
+                m_url = self.music_queue[0][0]['source']
+                self.current_song = self.music_queue[0][0]['title']
+
+            if self.is_repeat == 2 :
+                self.music_queue.append(self.repeat_url)
+                self.repeat_url = self.music_queue[0]
+                m_url = self.music_queue[0][0]['source']
+                self.current_song = self.music_queue[0][0]['title']
             
             self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
         else:
@@ -105,18 +103,34 @@ class music_Bot(commands.Cog):
         
         voice = ctx.author.voice
         if voice is None:
-            #you need to be connected so that the bot knows where to go
             await ctx.send("Connect to a voice channel!")
         elif self.is_paused:
             self.vc.resume()
         else:
             song = self.search_yt(query)
             if type(song) == type(True):
-                await ctx.send("Could not download the song. Incorrect format try another keyword. This could be due to playlist or a livestream format.")
+                if "playlist" in query :
+                    await ctx.send("it's a playlist")
+                    global p 
+                    p = Playlist(query)
+                    psong = []
+                    j = 0
+                    for i in p.video_urls:
+                        psong.append(self.search_yt(i))
+                        j += 1
+                        if j > 19:
+                            await ctx.send("theres a 20 song limit and you reach it ")
+                            break
+                    for i in psong :
+                        self.music_queue.append([i, voice.channel])
+                    await ctx.send("Songs added to the queue")
+                    if self.is_playing == False:
+                        await self.play_music(ctx)
+                else:
+                    await ctx.send("cant downlaod")
             else:
                 await ctx.send("Song added to the queue")
                 self.music_queue.append([song, voice.channel])
-                
                 if self.is_playing == False:
                     await self.play_music(ctx)
 
@@ -125,6 +139,7 @@ class music_Bot(commands.Cog):
         if self.is_playing:
             self.is_playing = False
             self.is_paused = True
+            await ctx.send("paused")
             self.vc.pause()
         elif self.is_paused:
             self.is_paused = False
@@ -138,7 +153,7 @@ class music_Bot(commands.Cog):
             self.is_playing = True
             self.vc.resume()
 
-    @commands.command(name = 'repeat', aliases=["re"], help="repeat the current song")
+    @commands.command(name = 'repeat', aliases=["re"], help="repeat the song")
     async def repeat(self, ctx, *args):
         str_args = ''.join(args)
         if str_args != '': int_args = int(str_args)
@@ -175,20 +190,18 @@ class music_Bot(commands.Cog):
         if self.vc != None and self.vc:
             self.vc.stop()
             if len(self.music_queue)  > 1 : 
-                ctx.send('skipping current song:%s \n going to play:%s' %(self.current_song, self.music_queue[1][0]['title']) )
+                await ctx.send('skipping current song:%s \n going to play:%s' %(self.current_song, self.music_queue[1][0]['title']) )
             else :
-                ctx.send('skipping current song:%s' %self.current_song)
-            self.music_queue.pop(0)
-            #try to play next in the queue if it exists
-            await self.play_music(ctx)
-
+                await ctx.send('skipping current song:%s' %self.current_song)
 
     @commands.command(name="queue", aliases=["q"], help="Displays the current songs in queue")
     async def queue(self, ctx):
         retval = ""
         for i in range(0, len(self.music_queue)):
-            # display a max of 5 songs in the current queue
-            retval += f'{i+1}' + ". " + self.music_queue[i][0]['title'] + "\n"
+            if (i == 0) :
+                retval += 'current song :' + self.music_queue[i][0]['title'] + "\n"
+            else :
+                retval += f'{i+1}' + ". " + self.music_queue[i][0]['title'] + "\n"
 
         if retval != "":
             await ctx.send(retval)
