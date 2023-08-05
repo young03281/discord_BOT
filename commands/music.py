@@ -10,7 +10,7 @@ class music_Bot(commands.Cog):
         self.is_playing = False
         self.is_paused = False
         self.music_queue = []
-        self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'outtmpl': 'C:/Users/User/Desktop/discord_BOT-main/downloads/%(extractor_key)s/%(extractor)s-%(id)s-%(title)s.%(ext)s'}
+        self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'outtmpl': 'C:\\Users\\User\\Desktop\\discord_BOT-main\\downloads\\%(extractor_key)s\\%(title)s.%(ext)s'}
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
         self.vc = None
         self.is_repeat = 0
@@ -26,11 +26,12 @@ class music_Bot(commands.Cog):
     def search_yt(self, item):
         with YoutubeDL(self.YDL_OPTIONS) as ydl:
             try: 
-                info = ydl.extract_info("ytsearch:%s" % item, download=False)['entries'][0]
+                info = ydl.extract_info("ytsearch:%s" % item, download = False )['entries'][0]
+                url = "C:\\Users\\User\\Desktop\\discord_BOT-main\\downloads\\Youtube\\" + info.get('title').replace("|", "_").replace("/", "_") + '.' + info['ext']
             except Exception: 
                 return False
                 
-        return {'source': info['formats'][0]['url'], 'title': info['title']}
+        return {'source': info['formats'][0]['url'], 'title': info['title']} #info['formats'][0]['url']
 
     async def play_music(self, ctx):
         if len(self.music_queue) > 0:
@@ -62,7 +63,7 @@ class music_Bot(commands.Cog):
                         return
             else:
                 await self.vc.move_to(self.music_queue[0][1])
-            
+
             self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
         else:
             await ctx.send("theres no songs in queue")
@@ -93,7 +94,7 @@ class music_Bot(commands.Cog):
                 m_url = self.music_queue[0][0]['source']
                 self.current_song = self.music_queue[0][0]['title']
             
-            self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
+            self.vc.play(discord.FFmpegPCMAudio(source= m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
         else:
             self.is_playing = False
 
@@ -116,7 +117,11 @@ class music_Bot(commands.Cog):
                     psong = []
                     j = 0
                     for i in p.video_urls:
-                        psong.append(self.search_yt(i))
+                        urls = self.search_yt(i)
+                        if type(urls) == type(True):
+                            await ctx.send("cant download the song. maybe it's 不公開")
+                            continue
+                        psong.append(urls)
                         j += 1
                         if j > 19:
                             await ctx.send("theres a 20 song limit and you reach it ")
