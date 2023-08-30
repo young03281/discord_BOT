@@ -26,7 +26,7 @@ class music_Bot(commands.Cog):
     def search_yt(self, item):
         with YoutubeDL(self.YDL_OPTIONS) as ydl:
             try: 
-                info = ydl.extract_info("ytsearch:%s" % item, download = True )['entries'][0]
+                info = ydl.extract_info("ytsearch:%s" % item, download = False)['entries'][0]
                 url = "./downloads/" + info.get("extractor") + "/" + info.get('title').replace("|", "_").replace("/", "_") + '.' + info['ext']
             except Exception: 
                 return False
