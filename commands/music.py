@@ -10,7 +10,7 @@ class music_Bot(commands.Cog):
         self.is_playing = False
         self.is_paused = False
         self.music_queue = []
-        self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'outtmpl': 'C:\\Users\\User\\Desktop\\discord_BOT-main\\downloads\\%(extractor_key)s\\%(title)s.%(ext)s'}
+        self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'outtmpl': './downloads/%(extractor_key)s/%(title)s.%(ext)s'}
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
         self.vc = None
         self.is_repeat = 0
@@ -26,8 +26,8 @@ class music_Bot(commands.Cog):
     def search_yt(self, item):
         with YoutubeDL(self.YDL_OPTIONS) as ydl:
             try: 
-                info = ydl.extract_info("ytsearch:%s" % item, download = False )['entries'][0]
-                url = "C:\\Users\\User\\Desktop\\discord_BOT-main\\downloads\\Youtube\\" + info.get('title').replace("|", "_").replace("/", "_") + '.' + info['ext']
+                info = ydl.extract_info("ytsearch:%s" % item, download = True )['entries'][0]
+                url = "./downloads/" + info.get("extractor") + "/" + info.get('title').replace("|", "_").replace("/", "_") + '.' + info['ext']
             except Exception: 
                 return False
                 
@@ -63,8 +63,10 @@ class music_Bot(commands.Cog):
                         return
             else:
                 await self.vc.move_to(self.music_queue[0][1])
-
-            self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
+            try:
+                self.vc.play(discord.FFmpegPCMAudio(m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
+            except Exception as e:
+                print(e)
         else:
             await ctx.send("theres no songs in queue")
             self.is_playing = False
