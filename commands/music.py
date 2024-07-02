@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from core.classes import Cog_Template
-from youtube_dl import YoutubeDL
+from yt_dlp import YoutubeDL
 from pytube import Playlist
 
 class music_Bot(commands.Cog):
@@ -31,7 +31,7 @@ class music_Bot(commands.Cog):
             except Exception: 
                 return False
                 
-        return {'source': info['formats'][0]['url'], 'title': info['title']} #info['formats'][0]['url']
+        return {'source': info['url'], 'title': info['title']} #info['formats'][0]['url']
 
     async def play_music(self, ctx):
         if len(self.music_queue) > 0:
@@ -136,8 +136,8 @@ class music_Bot(commands.Cog):
                 else:
                     await ctx.send("cant downlaod")
             else:
-                await ctx.send("Song added to the queue")
                 self.music_queue.append([song, voice.channel])
+                await ctx.send("Song added to the queue")
                 if self.is_playing == False:
                     await self.play_music(ctx)
 
