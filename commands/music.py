@@ -8,9 +8,8 @@ class music_Bot(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.is_playing = False
-        self.is_paused = False
         self.music_queue = []
-        self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True', 'outtmpl': './downloads/%(extractor_key)s/%(title)s.%(ext)s'}
+        self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'False', 'outtmpl': './downloads/%(extractor_key)s/%(title)s.%(ext)s'}
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
         self.vc = None
         self.is_repeat = 0
@@ -27,7 +26,6 @@ class music_Bot(commands.Cog):
         with YoutubeDL(self.YDL_OPTIONS) as ydl:
             try: 
                 info = ydl.extract_info("ytsearch:%s" % item, download = False)['entries'][0]
-                url = "./downloads/" + info.get("extractor") + "/" + info.get('title').replace("|", "_").replace("/", "_") + '.' + info['ext']
             except Exception: 
                 return False
                 
@@ -76,6 +74,12 @@ class music_Bot(commands.Cog):
             self.is_playing = True
             self.repeat_url = self.music_queue[0]
             self.music_queue.pop(0)
+            
+            if self.is_repeat == 1 : 
+                self.music_queue.insert(0, self.repeat_url)
+
+            if self.is_repeat == 2 :
+                self.music_queue.append(self.repeat_url)
 
             if len(self.music_queue) != 0 : 
                 m_url = self.music_queue[0][0]['source']
@@ -84,34 +88,26 @@ class music_Bot(commands.Cog):
                 self.is_playing = False
                 return
             
-            if self.is_repeat == 1 : 
-                self.music_queue.insert(0, self.repeat_url)
-                self.repeat_url = self.music_queue[0]
-                m_url = self.music_queue[0][0]['source']
-                self.current_song = self.music_queue[0][0]['title']
-
-            if self.is_repeat == 2 :
-                self.music_queue.append(self.repeat_url)
-                self.repeat_url = self.music_queue[0]
-                m_url = self.music_queue[0][0]['source']
-                self.current_song = self.music_queue[0][0]['title']
-            
             self.vc.play(discord.FFmpegPCMAudio(source= m_url, **self.FFMPEG_OPTIONS), after=lambda e: self.play_next())
         else:
             self.is_playing = False
 
     @commands.command(name="play", aliases=["p","playing"], help="Plays a selected song from youtube")
     async def play(self, ctx, *args):
-        query = " ".join(args)
+        query = "".join(args)
+
+        if query == "" :
+            await ctx.send("Please provide a song or playlist name") 
+            return
         
         voice = ctx.author.voice
         if voice is None:
             await ctx.send("Connect to a voice channel!")
-        elif self.is_paused:
-            self.vc.resume()
         else:
+            if query.find("watch") > 0 and query.find("&list") > 0:
+                query = query[0:query.find("&list")]
             song = self.search_yt(query)
-            if type(song) == type(True):
+            if song == False:
                 if "playlist" in query :
                     await ctx.send("it's a playlist")
                     global p 
@@ -133,8 +129,6 @@ class music_Bot(commands.Cog):
                     await ctx.send("Songs added to the queue")
                     if self.is_playing == False:
                         await self.play_music(ctx)
-                else:
-                    await ctx.send("cant downlaod")
             else:
                 self.music_queue.append([song, voice.channel])
                 await ctx.send("Song added to the queue")
@@ -145,18 +139,15 @@ class music_Bot(commands.Cog):
     async def pause(self, ctx, *args):
         if self.is_playing:
             self.is_playing = False
-            self.is_paused = True
             await ctx.send("paused")
             self.vc.pause()
-        elif self.is_paused:
-            self.is_paused = False
+        elif self.is_playing:
             self.is_playing = True
             self.vc.resume()
 
     @commands.command(name = "resume", aliases=["r"], help="Resumes playing with the discord bot")
     async def resume(self, ctx, *args):
-        if self.is_paused:
-            self.is_paused = False
+        if self.is_playing == False:
             self.is_playing = True
             self.vc.resume()
 
@@ -225,7 +216,6 @@ class music_Bot(commands.Cog):
     @commands.command(name="leave", aliases=["disconnect", "l", "d"], help="Kick the bot from VC")
     async def dc(self, ctx):
         self.is_playing = False
-        self.is_paused = False
         self.music_queue = []
         await ctx.guild.voice_client.disconnect()
 
