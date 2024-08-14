@@ -9,7 +9,7 @@ class music_Bot(commands.Cog):
         self.bot = bot
         self.is_playing = False
         self.music_queue = []
-        self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'False', 'outtmpl': './downloads/%(extractor_key)s/%(title)s.%(ext)s'}
+        self.YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'False'}
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
         self.vc = None
         self.is_repeat = 0
@@ -22,10 +22,13 @@ class music_Bot(commands.Cog):
 
      #searching the item on youtube
 
-    def search_yt(self, item):
+    def search_yt(self, item : str):
         with YoutubeDL(self.YDL_OPTIONS) as ydl:
             try: 
-                info = ydl.extract_info("ytsearch:%s" % item, download = False)['entries'][0]
+                if item.find("https://www.youtube.com") == -1:
+                    info = ydl.extract_info("ytsearch:%s" % item, download = False)['entries'][0]
+                else:
+                    info = ydl.extract_info(item, download = False)
             except Exception: 
                 return False
                 
