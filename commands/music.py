@@ -26,6 +26,7 @@ class music_Bot(commands.Cog):
         with YoutubeDL(self.YDL_OPTIONS) as ydl:
             try: 
                 if item.find("https://www.youtube.com") == -1:
+                    item.replace(" ", "+")
                     info = ydl.extract_info("ytsearch:%s" % item, download = False)['entries'][0]
                 else:
                     info = ydl.extract_info(item, download = False)
